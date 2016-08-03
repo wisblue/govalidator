@@ -660,13 +660,19 @@ func checkRequired(v reflect.Value, t reflect.StructField, options tagOptionsMap
 	return true, nil
 }
 
-func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value) (bool, error) {
+func TypeCheckByString(v interface{}, t_Name string, tag string) (bool, error) {
+	return typeCheckV2(reflect.ValueOf(v), t_Name, tag)
+}
+
+func typeCheckV2(v reflect.Value, t_Name string, tag string) (bool, error) {
 	if !v.IsValid() {
 		return false, nil
 	}
 
-	tag := t.Tag.Get(tagName)
-
+	t := reflect.StructField{}
+	t.Name = t_Name
+	
+	o := reflect.ValueOf(nil)
 	// Check if the field should be ignored
 	switch tag {
 	case "":
@@ -679,6 +685,10 @@ func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value) (bool, e
 	}
 
 	options := parseTagIntoMap(tag)
+	
+	// handling custom type validators
+	// IN: options, validatorName, v, o
+	// OUT: customTypeErrors, customTypeValidatorsExist
 	var customTypeErrors Errors
 	var customTypeValidatorsExist bool
 	for validatorName, customErrorMessage := range options {
@@ -700,11 +710,80 @@ func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value) (bool, e
 		return true, nil
 	}
 
+	// check empty
+	// IN: v, t, options
 	if isEmptyValue(v) {
 		// an empty value is not validated, check only required
 		return checkRequired(v, t, options)
 	}
 
+	// begin of main validation
+	// IN: v, options, ParamTagRegexMap, ParamTagMap, TagMap
+	// OUT: validation result
+	
+	return validateField(v, t, v, options)
+}
+
+
+func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value) (bool, error) {
+	if !v.IsValid() {
+		return false, nil
+	}
+
+	tag := t.Tag.Get(tagName)
+
+	// Check if the field should be ignored
+	switch tag {
+	case "":
+		if !fieldsRequiredByDefault {
+			return true, nil
+		}
+		return false, Error{t.Name, fmt.Errorf("All fields are required to at least have one validation defined"), false}
+	case "-":
+		return true, nil
+	}
+
+	options := parseTagIntoMap(tag)
+	
+	// handling custom type validators
+	// IN: options, validatorName, v, o
+	// OUT: customTypeErrors, customTypeValidatorsExist
+	var customTypeErrors Errors
+	var customTypeValidatorsExist bool
+	for validatorName, customErrorMessage := range options {
+		if validatefunc, ok := CustomTypeTagMap.Get(validatorName); ok {
+			customTypeValidatorsExist = true
+			if result := validatefunc(v.Interface(), o.Interface()); !result {
+				if len(customErrorMessage) > 0 {
+					customTypeErrors = append(customTypeErrors, Error{Name: t.Name, Err: fmt.Errorf(customErrorMessage), CustomErrorMessageExists: true})
+					continue
+				}
+				customTypeErrors = append(customTypeErrors, Error{Name: t.Name, Err: fmt.Errorf("%s does not validate as %s", fmt.Sprint(v), validatorName), CustomErrorMessageExists: false})
+			}
+		}
+	}
+	if customTypeValidatorsExist {
+		if len(customTypeErrors.Errors()) > 0 {
+			return false, customTypeErrors
+		}
+		return true, nil
+	}
+
+	// check empty
+	// IN: v, t, options
+	if isEmptyValue(v) {
+		// an empty value is not validated, check only required
+		return checkRequired(v, t, options)
+	}
+
+	// begin of main validation
+	// IN: v, options, ParamTagRegexMap, ParamTagMap, TagMap
+	// OUT: validation result
+	
+	return validateField(v, t, v, options)
+}
+
+func validateField(v reflect.Value, t reflect.StructField, o reflect.Value, options tagOptionsMap) (bool, error) {
 	switch v.Kind() {
 	case reflect.Bool,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -857,6 +936,8 @@ func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value) (bool, e
 		return false, &UnsupportedTypeError{v.Type()}
 	}
 }
+
+
 
 func isEmptyValue(v reflect.Value) bool {
 	switch v.Kind() {
