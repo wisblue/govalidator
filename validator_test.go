@@ -2387,3 +2387,15 @@ func ExampleValidateStruct() {
 	}
 	println(result)
 }
+
+
+func TestCheckTypeByString(t *testing.T) {
+	pwd := "12345"
+	if ok, _ := TypeCheckByString(pwd, "password", "alpha, stringlength(6:10)"); ok != false {
+		t.Error("this suppose to be invalid.")
+	}
+	pwd = "12345A"
+	if ok, err := TypeCheckByString(pwd, "password", "alphanum, stringlength(6:10)"); ok != true {
+		t.Error(err)
+	}
+}

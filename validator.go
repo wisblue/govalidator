@@ -660,12 +660,26 @@ func checkRequired(v reflect.Value, t reflect.StructField, options tagOptionsMap
 	return true, nil
 }
 
-func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value) (bool, error) {
+func TypeCheckByString(v interface{}, t_Name string, tag string) (bool, error) {
+	t := reflect.StructField{}
+	t.Name = t_Name
+	return typeCheck(reflect.ValueOf(v), t, reflect.ValueOf(nil), tag)
+}
+
+func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value, tags...string) (bool, error) {
 	if !v.IsValid() {
 		return false, nil
 	}
 
-	tag := t.Tag.Get(tagName)
+	var tag string
+	if len(tags) == 0 {
+		tag = t.Tag.Get(tagName)
+	} else {
+		tag = tags[0]
+		for i := 1; i < len(tags); i++ {
+			tag += "," + tags[i]
+		}
+	}
 
 	// Check if the field should be ignored
 	switch tag {
@@ -679,6 +693,10 @@ func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value) (bool, e
 	}
 
 	options := parseTagIntoMap(tag)
+	
+	// handling custom type validators
+	// IN: options, validatorName, v, o
+	// OUT: customTypeErrors, customTypeValidatorsExist
 	var customTypeErrors Errors
 	var customTypeValidatorsExist bool
 	for validatorName, customErrorMessage := range options {
@@ -700,11 +718,21 @@ func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value) (bool, e
 		return true, nil
 	}
 
+	// check empty
+	// IN: v, t, options
 	if isEmptyValue(v) {
 		// an empty value is not validated, check only required
 		return checkRequired(v, t, options)
 	}
 
+	// begin of main validation
+	// IN: v, options, ParamTagRegexMap, ParamTagMap, TagMap
+	// OUT: validation result
+	
+	return validateField(v, t, v, options)
+}
+
+func validateField(v reflect.Value, t reflect.StructField, o reflect.Value, options tagOptionsMap) (bool, error) {
 	switch v.Kind() {
 	case reflect.Bool,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -857,6 +885,8 @@ func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value) (bool, e
 		return false, &UnsupportedTypeError{v.Type()}
 	}
 }
+
+
 
 func isEmptyValue(v reflect.Value) bool {
 	switch v.Kind() {
