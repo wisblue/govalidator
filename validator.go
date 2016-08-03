@@ -647,29 +647,61 @@ func StringLength(str interface{}, params ...string) bool {
 	return false
 }
 
+// ByteLength check string's length
+func LengthV(str interface{}, matched string, params ...string) bool {
+	if len(params) == 2 {
+		min, _ := ToInt(params[0])
+		max, _ := ToInt(params[1])
+		v := reflect.ValueOf(str)
+		switch v.Kind() {
+			case reflect.String:
+				s := str.(string)
+				return len(s) >= int(min) && len(s) <= int(max)
+			case reflect.Slice, reflect.Array:
+				return int64(v.Len()) >= int64(min) && int64(v.Len()) <= int64(max)
+		}
+	}
+
+	return false
+}
+
+// StringMatches checks if a string matches a given pattern.
+func StringMatchesV(s interface{}, matched string, params ...string) bool {
+	if len(params) == 1 {
+		pattern := params[0]
+		return Matches(s.(string), pattern)
+	}
+	return false
+}
+
+// StringLength check string's length (including multi byte strings)
+func StringLengthV(str interface{}, matched string, params ...string) bool {
+
+	if len(params) == 2 {
+		strLength := utf8.RuneCountInString(str.(string))
+		min, _ := ToInt(params[0])
+		max, _ := ToInt(params[1])
+		return strLength >= int(min) && strLength <= int(max)
+	}
+
+	return false
+}
+
 // Between check number's value is between the given range values 
 // can be represented as [ for <=, ( for <, ] for >=, ) for >
-func Between(v interface{}, params ...string) bool {
+func Between(v interface{}, matched string, params ...string) bool {
 	if len(params) == 4 {
+		q1 := params[0]
+		q2 := params[3]
 		switch v.(type) {
 			case int:
 				i := v.(int)
 				min, _ := strconv.Atoi(params[1])
 				max, _ := strconv.Atoi(params[2])
-				q1 := params[0]
-				q2 := params[3]
-				res := true
-				if q1 == "[" {
-					res = res && i >= min
-				} else if q1 == "(" {
-					res = res && i > min
-				}
-				if q2 == "]" {
-					res = res && i <= max
-				} else if q2 == ")" {
-					res = res && i < max
-				}
-				return res
+				return ((q1 == "[" && i >= min) ||
+						(q1 == "(" && i > min) )&& 
+					   ((q2 == "]" && i <= max) ||
+						(q2 == ")" && i < max))
 			default:
 				return false
 		}
@@ -677,6 +709,35 @@ func Between(v interface{}, params ...string) bool {
 
 	return false
 }
+
+func Enum(v interface{}, matched string, params ...string) bool {
+	if len(params) > 0 {
+		matched = strings.ToLower(matched)
+		e := strings.TrimPrefix(matched, "enum(")
+		e = strings.TrimSuffix(e, ")")
+		items := strings.Split(e, "|")
+		
+		ary := reflect.ValueOf(v)
+
+		for i := 0; i < ary.Len(); i++ {
+			s := fmt.Sprint(ary.Index(i).Interface())
+			match := false
+			for _, w := range items {
+				if s == w {
+					match = true
+					break
+				}
+			}
+			if match == false {
+				return false
+			}
+		}
+		return true
+	}
+	
+	return false
+}
+
 func checkRequired(v reflect.Value, t reflect.StructField, options tagOptionsMap) (bool, error) {
 	if requiredOption, isRequired := options["required"]; isRequired {
 		if len(requiredOption) > 0 {
@@ -793,7 +854,7 @@ func validateField(v reflect.Value, t reflect.StructField, o reflect.Value, opti
 							// type not yet supported, fail
 							return false, Error{t.Name, fmt.Errorf("Validator %s doesn't support kind %s", validator, v.Kind()), false}
 						}
-						if result := validatefunc(field, ps[1:]...); (!result && !negate) || (result && negate) {
+						if result := validatefunc(field, validator, ps[1:]...); (!result && !negate) || (result && negate) {
 							var err error
 							if !negate {
 								if customMsgExists {
@@ -815,7 +876,7 @@ func validateField(v reflect.Value, t reflect.StructField, o reflect.Value, opti
 				}
 			}
 
-			if validatefunc, ok := TagMap[validator]; ok {
+			if validatefunc, ok := TagMap[validator]; ok {		
 				switch v.Kind() {
 				case reflect.String, reflect.Int:
 					field := fmt.Sprint(v) // make value into string, then validate with regex
@@ -861,26 +922,78 @@ func validateField(v reflect.Value, t reflect.StructField, o reflect.Value, opti
 			result = result && resultItem
 		}
 		return result, nil
-	case reflect.Slice:
-		result := true
-		for i := 0; i < v.Len(); i++ {
-			var resultItem bool
-			var err error
-			if v.Index(i).Kind() != reflect.Struct {
-				resultItem, err = typeCheck(v.Index(i), t, o)
-				if err != nil {
-					return false, err
-				}
-			} else {
-				resultItem, err = ValidateStruct(v.Index(i).Interface())
-				if err != nil {
-					return false, err
+	case reflect.Slice, reflect.Array:
+		for validator, customErrorMessage := range options {
+			var negate bool
+			customMsgExists := (len(customErrorMessage) > 0)
+			// Check wether the tag looks like '!something' or 'something'
+			if validator[0] == '!' {
+				validator = string(validator[1:])
+				negate = true
+			}
+
+			// Check for param validators
+			for key, value := range ParamTagRegexMap {
+				ps := value.FindStringSubmatch(validator)
+				if len(ps) > 0 {
+					if validatefunc, ok := ParamTagMap[key]; ok {
+						
+						field := v.Interface()
+						if result := validatefunc(field, validator, ps[1:]...); (!result && !negate) || (result && negate) {
+							var err error
+							if !negate {
+								if customMsgExists {
+									err = fmt.Errorf(customErrorMessage)
+								} else {
+									err = fmt.Errorf("%v does not validate as %s", field, validator)
+								}
+
+							} else {
+								if customMsgExists {
+									err = fmt.Errorf(customErrorMessage)
+								} else {
+									err = fmt.Errorf("%s does validate as %s", field, validator)
+								}
+							}
+							return false, Error{t.Name, err, customMsgExists}
+						}
+					}
 				}
 			}
-			result = result && resultItem
+
+			// check for non parametered validators
+			if validatefunc, ok := TagMap[validator]; ok {
+				switch v.Index(0).Kind() {
+				case reflect.String, reflect.Int:
+					for i := 0; i < v.Len(); i++ {
+						field := fmt.Sprint(v.Index(i)) // make value into string, then validate with regex
+						if result := validatefunc(field); !result && !negate || result && negate {
+							var err error
+	
+							if !negate {
+								if customMsgExists {
+									err = fmt.Errorf(customErrorMessage)
+								} else {
+									err = fmt.Errorf("%s does not validate as %s", field, validator)
+								}
+							} else {
+								if customMsgExists {
+									err = fmt.Errorf(customErrorMessage)
+								} else {
+									err = fmt.Errorf("%s does validate as %s", field, validator)
+								}
+							}
+							return false, Error{t.Name, err, customMsgExists}
+						}
+					}
+				default:
+					//Not Yet Supported Types (Fail here!)
+					err := fmt.Errorf("Validator %s doesn't support kind %s for value %v", validator, v.Kind(), v)
+					return false, Error{t.Name, err, false}
+				}
+			}
 		}
-		return result, nil
-	case reflect.Array:
+
 		result := true
 		for i := 0; i < v.Len(); i++ {
 			var resultItem bool

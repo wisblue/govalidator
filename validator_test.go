@@ -2206,9 +2206,10 @@ func TestRequired(t *testing.T) {
 			false,
 		},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		actual, err := ValidateStruct(test.param)
 		if actual != test.expected {
+			t.Log(i, test)
 			t.Errorf("Expected ValidateStruct(%q) to be %v, got %v", test.param, test.expected, actual)
 			if err != nil {
 				t.Errorf("Got Error on ValidateStruct(%q): %s", test.param, err)
@@ -2414,5 +2415,18 @@ func TestBetween(t *testing.T) {
 		t.Error(err)
 	}
 
+}
+
+func TestList(t *testing.T) {
+	v := []int{1,2,3,4,5,6}
+	if ok, err := TypeCheckByString(v, "enum", "enum(1|2|3|4|5|6)"); ok != true {
+		t.Error(err)
+	}
+	if ok, err := TypeCheckByString(v, "list", "int,enum(1|2|3|4|5|6),length(0|6)"); ok != true {
+		t.Error(err)
+	}
+	if ok, err := TypeCheckByString(v, "list", "int,enum(1|2|3|5|6)"); ok != false {
+		t.Error(err)
+	}
 }
 
