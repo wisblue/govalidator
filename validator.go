@@ -615,30 +615,30 @@ func IsSemver(str string) bool {
 }
 
 // ByteLength check string's length
-func ByteLength(str string, params ...string) bool {
+func ByteLength(str interface{}, params ...string) bool {
 	if len(params) == 2 {
 		min, _ := ToInt(params[0])
 		max, _ := ToInt(params[1])
-		return len(str) >= int(min) && len(str) <= int(max)
+		return len(str.(string)) >= int(min) && len(str.(string)) <= int(max)
 	}
 
 	return false
 }
 
 // StringMatches checks if a string matches a given pattern.
-func StringMatches(s string, params ...string) bool {
+func StringMatches(s interface{}, params ...string) bool {
 	if len(params) == 1 {
 		pattern := params[0]
-		return Matches(s, pattern)
+		return Matches(s.(string), pattern)
 	}
 	return false
 }
 
 // StringLength check string's length (including multi byte strings)
-func StringLength(str string, params ...string) bool {
+func StringLength(str interface{}, params ...string) bool {
 
 	if len(params) == 2 {
-		strLength := utf8.RuneCountInString(str)
+		strLength := utf8.RuneCountInString(str.(string))
 		min, _ := ToInt(params[0])
 		max, _ := ToInt(params[1])
 		return strLength >= int(min) && strLength <= int(max)
@@ -647,6 +647,35 @@ func StringLength(str string, params ...string) bool {
 	return false
 }
 
+// StringLength check string's length (including multi byte strings)
+func Between(v interface{}, params ...string) bool {
+	if len(params) == 4 {
+		switch v.(type) {
+			case int:
+				i := v.(int)
+				min, _ := strconv.Atoi(params[1])
+				max, _ := strconv.Atoi(params[2])
+				q1 := params[0]
+				q2 := params[3]
+				res := true
+				if q1 == "[" {
+					res = res && i >= min
+				} else if q1 == "(" {
+					res = res && i > min
+				}
+				if q2 == "]" {
+					res = res && i <= max
+				} else if q2 == ")" {
+					res = res && i < max
+				}
+				return res
+			default:
+				return false
+		}
+	}
+
+	return false
+}
 func checkRequired(v reflect.Value, t reflect.StructField, options tagOptionsMap) (bool, error) {
 	if requiredOption, isRequired := options["required"]; isRequired {
 		if len(requiredOption) > 0 {
@@ -754,30 +783,32 @@ func validateField(v reflect.Value, t reflect.StructField, o reflect.Value, opti
 				ps := value.FindStringSubmatch(validator)
 				if len(ps) > 0 {
 					if validatefunc, ok := ParamTagMap[key]; ok {
-						switch v.Kind() {
-						case reflect.String:
-							field := fmt.Sprint(v) // make value into string, then validate with regex
-							if result := validatefunc(field, ps[1:]...); (!result && !negate) || (result && negate) {
-								var err error
-								if !negate {
-									if customMsgExists {
-										err = fmt.Errorf(customErrorMessage)
-									} else {
-										err = fmt.Errorf("%s does not validate as %s", field, validator)
-									}
+						var field interface{}
 
-								} else {
-									if customMsgExists {
-										err = fmt.Errorf(customErrorMessage)
-									} else {
-										err = fmt.Errorf("%s does validate as %s", field, validator)
-									}
-								}
-								return false, Error{t.Name, err, customMsgExists}
-							}
+						switch v.Kind() {
+						case reflect.String, reflect.Int:
+							field = v.Interface() // make value into string, then validate with regex
 						default:
 							// type not yet supported, fail
 							return false, Error{t.Name, fmt.Errorf("Validator %s doesn't support kind %s", validator, v.Kind()), false}
+						}
+						if result := validatefunc(field, ps[1:]...); (!result && !negate) || (result && negate) {
+							var err error
+							if !negate {
+								if customMsgExists {
+									err = fmt.Errorf(customErrorMessage)
+								} else {
+									err = fmt.Errorf("%v does not validate as %s", field, validator)
+								}
+
+							} else {
+								if customMsgExists {
+									err = fmt.Errorf(customErrorMessage)
+								} else {
+									err = fmt.Errorf("%s does validate as %s", field, validator)
+								}
+							}
+							return false, Error{t.Name, err, customMsgExists}
 						}
 					}
 				}
@@ -785,7 +816,7 @@ func validateField(v reflect.Value, t reflect.StructField, o reflect.Value, opti
 
 			if validatefunc, ok := TagMap[validator]; ok {
 				switch v.Kind() {
-				case reflect.String:
+				case reflect.String, reflect.Int:
 					field := fmt.Sprint(v) // make value into string, then validate with regex
 					if result := validatefunc(field); !result && !negate || result && negate {
 						var err error
