@@ -5,6 +5,24 @@ govalidator
 
 A package of validators and sanitizers for strings, structs and collections. Based on [validator.js](https://github.com/chriso/validator.js).
 
+#### Changes in this fork
+Added function to validate variable by given string tag, like tags in struct
+func TypeCheckByString(v interface{}, t_Name string, tag string) (bool, error)
+
+based on source checkType
+
+#### example 
+func TestCheckTypeByString(t *testing.T) {
+	pwd := "12345"
+	if ok, _ := TypeCheckByString(pwd, "password", "alpha, stringlength(6:10)"); ok != false {
+		t.Error("this suppose to be invalid.")
+	}
+	pwd = "12345A"
+	if ok, err := TypeCheckByString(pwd, "password", "alphanum, stringlength(6:10)"); ok != true {
+		t.Error(err)
+	}
+}
+
 #### Installation
 Make sure that Go is installed on your computer.
 Type the following command in your terminal:
