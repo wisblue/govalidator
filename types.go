@@ -43,7 +43,7 @@ var ParamTagRegexMap = map[string]*regexp.Regexp{
 	"matches":      regexp.MustCompile(`matches\(([^)]+)\)`),
 	"range":      regexp.MustCompile("range([\\(\\[])(\\d+)\\|(\\d+)([\\)\\]])$"),
 	"enum":			 regexp.MustCompile(`enum\(.*\)`),
-	"datetime":		 regexp.MustCompile(`date\(.*\)`),
+	"datetime":		 regexp.MustCompile(`datetime\(.*\)`),
 }
 
 type customTypeTagMap struct {
@@ -120,6 +120,7 @@ var TagMap = map[string]Validator{
 	"ssn":            IsSSN,
 	"semver":         IsSemver,
 	"duration":		   IsDuration,
+	"chinamobile":	   IsChinaMobile,
 }
 
 // ISO3166Entry stores country codes

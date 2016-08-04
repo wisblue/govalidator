@@ -2436,15 +2436,15 @@ func TestDatetime(t *testing.T) {
 		expected bool
 	}{
 		{"Mon Jan 2 15:04:05 -0700 MST 2006", true},
-		{"2006-1-2 星期2 15:04:05 -0700 MST", true},
+		{"2006-1-2 星期2 15:04:05 -0700 MST", false},
 		{"some wrong date format - 2016", false},
 		{"2016/8/4", true},
 	}
 
 	for _, v := range tests {
-		if ok, err := TypeCheckByString(v, "date", "datetime(Mon Jan 2 15:04:05 -0700 MST 2006|2006-1-2 15:04:05 -0700 MST)|2006/1/2"); ok != true {
-		t.Error(err)
-	}
+		if ok, _ := TypeCheckByString(v.param, "date", "datetime(Mon Jan 2 15:04:05 -0700 MST 2006|2006-1-2 15:04:05 -0700 MST|2006/1/2)"); ok != v.expected {
+			t.Error("check failed:", v.param)
+		}
 	}
 
 }
@@ -2460,7 +2460,28 @@ func TestDuration(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		if ok, err := TypeCheckByString(v, "duration", "duration"); ok != true {
+		if ok, err := TypeCheckByString(v.param, "duration", "duration"); ok != v.expected {
+		t.Error(err)
+	}
+	}
+
+}
+
+func TestChinaNumbers(t *testing.T) {
+	var tests = []struct {
+		param    string
+		expected bool
+	}{
+		{"13800923008", true},
+		{"13800923008x", false},
+		{"18923766087", true},
+		{"138009x23008", false},
+		{"x138009x2300", false},
+		{"138009230083", false},
+	}
+
+	for _, v := range tests {
+		if res, err := TypeCheckByString(v.param, "mobile", "chinamobile"); res != v.expected {
 		t.Error(err)
 	}
 	}

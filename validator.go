@@ -624,6 +624,18 @@ func IsDuration(str string) bool {
 	return err == nil
 }
 
+// check if valid China mobile phone number
+func IsChinaMobile(str string) bool {
+	reg := regexp.MustCompile(`^1[0-9]{10}$`)
+	return reg.FindString(str) == str
+}
+
+
+// check if valid China mobile phone number
+func IsChinaIdCard(str string) bool {
+	reg := regexp.MustCompile(`^\d{15}$)|(^\d{17}([0-9]|X)$`)
+	return reg.FindString(str) == str
+}
 
 // IsDatetime check if the string is valid date time format
 // ref https://golang.org/pkg/time/#Parse for how to specify the date time format
@@ -631,10 +643,8 @@ func IsDuration(str string) bool {
 // multiple format is allowed by sperarator "|"
 func IsDatetime(str interface{}, params ...string) bool {
 	if len(params) > 0 {
-		fmt.Println(params[0])
 		f := params[0]
 		f = strings.TrimSpace(f)
-		f = strings.ToLower(f)
 		f = strings.TrimPrefix(f, "datetime(")
 		f = strings.TrimSuffix(f, ")")
 		fs := strings.Split(f, "|")
