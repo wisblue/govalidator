@@ -121,6 +121,7 @@ var TagMap = map[string]Validator{
 	"semver":         IsSemver,
 	"duration":		   IsDuration,
 	"chinamobile":	   IsChinaMobile,
+	"chinaidcard":    IsChinaIdCard,
 }
 
 // ISO3166Entry stores country codes

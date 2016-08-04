@@ -2487,3 +2487,20 @@ func TestChinaNumbers(t *testing.T) {
 	}
 
 }
+
+func TestChinaIdCard(t *testing.T) {
+	var tests = []struct {
+		param    string
+		expected bool
+	}{
+		{"13800923008", false},
+		{"110104198206072636", true},
+		{"110104198206072635", false},
+	}
+
+	for _, v := range tests {
+		if res, err := TypeCheckByString(v.param, "idcard", "chinaidcard"); res != v.expected {
+			t.Error(err)
+		}
+	}
+}

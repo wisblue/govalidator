@@ -633,8 +633,31 @@ func IsChinaMobile(str string) bool {
 
 // check if valid China mobile phone number
 func IsChinaIdCard(str string) bool {
-	reg := regexp.MustCompile(`^\d{15}$)|(^\d{17}([0-9]|X)$`)
-	return reg.FindString(str) == str
+	reg := regexp.MustCompile(`(^[0-9]{6}[1|2][0-9]{3}[01][0-9][0-3][0-9]{4}([0-9]|X)$)`)
+	if reg.FindString(str) == str {
+		valid, _ := validateChinaId(str)
+		return valid
+	}
+	return false
+}
+
+// china id card is composed from 
+// 1. address code : 6 digits
+// 2. birthday 8 digits
+// 3. swq number 3 digits, even for female, odd for male
+// 4. vefification code, 1 digits
+func validateChinaId(str string) (isvalid bool, expected string) {
+    weight := []int {7,9,10,5,8,4,2,1,6,3,7,9,10,5,8,4,2}    //十七位数字本体码权重
+    validate := []byte{ '1','0','X','9','8','7','6','5','4','3','2'}    //mod11,对应校验码字符值    
+     
+    sum := 0
+    mode := 0
+	for i, v := range []byte(str)[:17] {
+		c := v - '0'
+        sum = sum + int(c) * weight[i];
+    }
+    mode = sum % 11;
+    return validate[mode] == str[17], string(validate[mode])
 }
 
 // IsDatetime check if the string is valid date time format
