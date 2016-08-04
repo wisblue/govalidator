@@ -14,7 +14,7 @@ type Validator func(str string) bool
 type CustomTypeValidator func(i interface{}, o interface{}) bool
 
 // ParamValidator is a wrapper for validator functions that accepts additional parameters.
-type ParamValidator func(str interface{}, matched string, params ...string) bool
+type ParamValidator func(str interface{}, params ...string) bool
 type tagOptionsMap map[string]string
 
 // UnsupportedTypeError is a wrapper for reflect.Type
@@ -33,6 +33,7 @@ var ParamTagMap = map[string]ParamValidator{
 	"matches":      StringMatchesV,
 	"range":		Range,
 	"enum":			Enum,
+	"datetime":		IsDatetime,
 }
 
 // ParamTagRegexMap maps param tags to their respective regexes.
@@ -41,7 +42,8 @@ var ParamTagRegexMap = map[string]*regexp.Regexp{
 	"stringlength": regexp.MustCompile("^stringlength\\((\\d+)\\|(\\d+)\\)$"),
 	"matches":      regexp.MustCompile(`matches\(([^)]+)\)`),
 	"range":      regexp.MustCompile("range([\\(\\[])(\\d+)\\|(\\d+)([\\)\\]])$"),
-	"enum":			 regexp.MustCompile(`enum\((\w+\|)*(\w+){1}\)`),
+	"enum":			 regexp.MustCompile(`enum\(.*\)`),
+	"datetime":		 regexp.MustCompile(`date\(.*\)`),
 }
 
 type customTypeTagMap struct {

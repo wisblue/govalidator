@@ -2430,3 +2430,20 @@ func TestList(t *testing.T) {
 	}
 }
 
+func TestDatetime(t *testing.T) {
+	var tests = []struct {
+		param    string
+		expected bool
+	}{
+		{"Mon Jan 2 15:04:05 -0700 MST 2006", true},
+		{"2006-1-2 15:04:05 -0700 MST", true},
+		{"some wrong date format - 2016", false},
+	}
+
+	for _, v := range tests {
+		if ok, err := TypeCheckByString(v, "date", "datetime(Mon Jan 2 15:04:05 -0700 MST 2006|2006-1-2 15:04:05 -0700 MST)"); ok != true {
+		t.Error(err)
+	}
+	}
+
+}

@@ -2,6 +2,7 @@
 package govalidator
 
 import (
+	"time"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -614,6 +615,29 @@ func IsSemver(str string) bool {
 	return rxSemver.MatchString(str)
 }
 
+// IsDatetime check if the string is valid date time format
+// ref https://golang.org/pkg/time/#Parse for how to specify the date time format
+// (strings of how to present the time 'Mon Jan 2 15:04:05 -0700 MST 2006' should be given
+// multiple format is allowed by sperarator "|"
+func IsDatetime(str interface{}, params ...string) bool {
+	if len(params) > 0 {
+		fmt.Println(params[0])
+		f := params[0]
+		f = strings.TrimSpace(f)
+		f = strings.ToLower(f)
+		f = strings.TrimPrefix(f, "datetime(")
+		f = strings.TrimSuffix(f, ")")
+		fs := strings.Split(f, "|")
+		for _, v := range fs {
+			if _, err := time.Parse(v, str.(string)); err == nil {
+				return true
+			}
+		}
+	}
+	
+	return false
+}
+
 // ByteLength check string's length
 func ByteLength(str interface{}, params ...string) bool {
 	if len(params) == 2 {
@@ -627,8 +651,8 @@ func ByteLength(str interface{}, params ...string) bool {
 
 // StringMatches checks if a string matches a given pattern.
 func StringMatches(s interface{}, params ...string) bool {
-	if len(params) == 1 {
-		pattern := params[0]
+	if len(params) > 1 {
+		pattern := params[1]
 		return Matches(s.(string), pattern)
 	}
 	return false
@@ -648,10 +672,10 @@ func StringLength(str interface{}, params ...string) bool {
 }
 
 // ByteLength check string's length
-func LengthV(str interface{}, matched string, params ...string) bool {
-	if len(params) == 2 {
-		min, _ := ToInt(params[0])
-		max, _ := ToInt(params[1])
+func LengthV(str interface{}, params ...string) bool {
+	if len(params) > 2 {
+		min, _ := ToInt(params[1])
+		max, _ := ToInt(params[2])
 		v := reflect.ValueOf(str)
 		switch v.Kind() {
 			case reflect.String:
@@ -666,21 +690,21 @@ func LengthV(str interface{}, matched string, params ...string) bool {
 }
 
 // StringMatches checks if a string matches a given pattern.
-func StringMatchesV(s interface{}, matched string, params ...string) bool {
-	if len(params) == 1 {
-		pattern := params[0]
+func StringMatchesV(s interface{}, params ...string) bool {
+	if len(params) > 1 {
+		pattern := params[1]
 		return Matches(s.(string), pattern)
 	}
 	return false
 }
 
 // StringLength check string's length (including multi byte strings)
-func StringLengthV(str interface{}, matched string, params ...string) bool {
+func StringLengthV(str interface{},  params ...string) bool {
 
-	if len(params) == 2 {
+	if len(params) > 2 {
 		strLength := utf8.RuneCountInString(str.(string))
-		min, _ := ToInt(params[0])
-		max, _ := ToInt(params[1])
+		min, _ := ToInt(params[1])
+		max, _ := ToInt(params[2])
 		return strLength >= int(min) && strLength <= int(max)
 	}
 
@@ -689,15 +713,15 @@ func StringLengthV(str interface{}, matched string, params ...string) bool {
 
 // Range check number's value is between the given range values 
 // can be represented as [ for <=, ( for <, ] for >=, ) for >
-func Range(v interface{}, matched string, params ...string) bool {
-	if len(params) == 4 {
-		q1 := params[0]
-		q2 := params[3]
+func Range(v interface{}, params ...string) bool {
+	if len(params) > 4 {
+		q1 := params[1]
+		q2 := params[4]
 		switch v.(type) {
 			case int:
 				i := v.(int)
-				min, _ := strconv.Atoi(params[1])
-				max, _ := strconv.Atoi(params[2])
+				min, _ := strconv.Atoi(params[2])
+				max, _ := strconv.Atoi(params[3])
 				return ((q1 == "[" && i >= min) ||
 						(q1 == "(" && i > min) )&& 
 					   ((q2 == "]" && i <= max) ||
@@ -710,8 +734,8 @@ func Range(v interface{}, matched string, params ...string) bool {
 				    case float64:
 						i = v.(float64)
 				}
-				min, _ := strconv.ParseFloat(params[1], 64)
-				max, _ := strconv.ParseFloat(params[2], 64)
+				min, _ := strconv.ParseFloat(params[2], 64)
+				max, _ := strconv.ParseFloat(params[3], 64)
 				return ((q1 == "[" && i >= min) ||
 						(q1 == "(" && i > min) )&& 
 					   ((q2 == "]" && i <= max) ||
@@ -724,9 +748,9 @@ func Range(v interface{}, matched string, params ...string) bool {
 	return false
 }
 
-func Enum(v interface{}, matched string, params ...string) bool {
+func Enum(v interface{}, params ...string) bool {
 	if len(params) > 0 {
-		matched = strings.ToLower(matched)
+		matched := strings.ToLower(params[0])
 		e := strings.TrimPrefix(matched, "enum(")
 		e = strings.TrimSuffix(e, ")")
 		items := strings.Split(e, "|")
@@ -862,7 +886,7 @@ func validateField(v reflect.Value, t reflect.StructField, o reflect.Value, opti
 						var field interface{}
 
 						field = v.Interface()
-						if result := validatefunc(field, validator, ps[1:]...); (!result && !negate) || (result && negate) {
+						if result := validatefunc(field, ps[0:]...); (!result && !negate) || (result && negate) {
 							var err error
 							if !negate {
 								if customMsgExists {
@@ -947,7 +971,7 @@ func validateField(v reflect.Value, t reflect.StructField, o reflect.Value, opti
 					if validatefunc, ok := ParamTagMap[key]; ok {
 						
 						field := v.Interface()
-						if result := validatefunc(field, validator, ps[1:]...); (!result && !negate) || (result && negate) {
+						if result := validatefunc(field, ps[0:]...); (!result && !negate) || (result && negate) {
 							var err error
 							if !negate {
 								if customMsgExists {
