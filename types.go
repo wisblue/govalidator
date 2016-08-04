@@ -119,6 +119,7 @@ var TagMap = map[string]Validator{
 	"longitude":      IsLongitude,
 	"ssn":            IsSSN,
 	"semver":         IsSemver,
+	"duration":		   IsDuration,
 }
 
 // ISO3166Entry stores country codes

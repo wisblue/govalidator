@@ -615,6 +615,16 @@ func IsSemver(str string) bool {
 	return rxSemver.MatchString(str)
 }
 
+// IsDurtion check if string is valid duration string
+// such as "300ms", "-1.5h" or "2h45m". Valid time units 
+// are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+// ref https://golang.org/pkg/time/#ParseDuration
+func IsDuration(str string) bool {
+	_, err := time.ParseDuration(str)
+	return err == nil
+}
+
+
 // IsDatetime check if the string is valid date time format
 // ref https://golang.org/pkg/time/#Parse for how to specify the date time format
 // (strings of how to present the time 'Mon Jan 2 15:04:05 -0700 MST 2006' should be given

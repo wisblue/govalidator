@@ -1,7 +1,6 @@
 package govalidator
 
 import (
-	"time"
 	"fmt"
 	"strings"
 	"testing"
@@ -2444,6 +2443,24 @@ func TestDatetime(t *testing.T) {
 
 	for _, v := range tests {
 		if ok, err := TypeCheckByString(v, "date", "datetime(Mon Jan 2 15:04:05 -0700 MST 2006|2006-1-2 15:04:05 -0700 MST)|2006/1/2"); ok != true {
+		t.Error(err)
+	}
+	}
+
+}
+
+func TestDuration(t *testing.T) {
+	var tests = []struct {
+		param    string
+		expected bool
+	}{
+		{"1h30m", true},
+		{"30ms20us", true},
+		{"some wrong format - 2016", false},
+	}
+
+	for _, v := range tests {
+		if ok, err := TypeCheckByString(v, "duration", "duration"); ok != true {
 		t.Error(err)
 	}
 	}
