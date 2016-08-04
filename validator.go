@@ -633,10 +633,14 @@ func IsChinaMobile(str string) bool {
 
 // check if valid China mobile phone number
 func IsChinaIdCard(str string) bool {
-	reg := regexp.MustCompile(`(^[0-9]{6}[1|2][0-9]{3}[01][0-9][0-3][0-9]{4}([0-9]|X)$)`)
+	reg := regexp.MustCompile(`(^[0-9]{6}[1|2][0-9]{3}[01][0-9][0-3][0-9]{4}([0-9]|X)$)|(^[0-9]{6}[0-9]{2}[01][0-9][0-3][0-9]{4}$)`)
 	if reg.FindString(str) == str {
-		valid, _ := validateChinaId(str)
-		return valid
+		if len(str) == 18 {
+			valid, _ := validateChinaId(str)
+			return valid
+		} else {
+			return true			
+		}
 	}
 	return false
 }

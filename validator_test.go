@@ -2496,6 +2496,7 @@ func TestChinaIdCard(t *testing.T) {
 		{"13800923008", false},
 		{"110104198206072636", true},
 		{"110104198206072635", false},
+		{"110104820607263", true},
 	}
 
 	for _, v := range tests {
