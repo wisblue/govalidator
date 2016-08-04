@@ -31,7 +31,7 @@ var ParamTagMap = map[string]ParamValidator{
 	"length":       LengthV,
 	"stringlength": StringLengthV,
 	"matches":      StringMatchesV,
-	"between":		Between,
+	"range":		Range,
 	"enum":			Enum,
 }
 
@@ -40,7 +40,7 @@ var ParamTagRegexMap = map[string]*regexp.Regexp{
 	"length":       regexp.MustCompile("^length\\((\\d+)\\|(\\d+)\\)$"),
 	"stringlength": regexp.MustCompile("^stringlength\\((\\d+)\\|(\\d+)\\)$"),
 	"matches":      regexp.MustCompile(`matches\(([^)]+)\)`),
-	"between":      regexp.MustCompile("between([\\(\\[])(\\d+)\\|(\\d+)([\\)\\]])$"),
+	"range":      regexp.MustCompile("range([\\(\\[])(\\d+)\\|(\\d+)([\\)\\]])$"),
 	"enum":			 regexp.MustCompile(`enum\((\w+\|)*(\w+){1}\)`),
 }
 

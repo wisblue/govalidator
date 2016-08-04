@@ -2404,14 +2404,14 @@ func TestCheckTypeByString(t *testing.T) {
 
 func TestBetween(t *testing.T) {
 	v := 2
-	if ok, err := TypeCheckByString(v, "number", "int,between(1|3)"); ok != true {
+	if ok, err := TypeCheckByString(v, "number", "int,range(1|3)"); ok != true {
 		t.Error(err)
 	}
 	v = 1
-	if ok, err := TypeCheckByString(v, "number", "int,between(1|3)"); ok != false {
+	if ok, err := TypeCheckByString(v, "number", "int,range(1|3)"); ok != false {
 		t.Error(err)
 	}
-	if ok, err := TypeCheckByString(v, "number", "int,between[1|3)"); ok != true {
+	if ok, err := TypeCheckByString(v, "number", "int,range[1|3)"); ok != true {
 		t.Error(err)
 	}
 

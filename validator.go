@@ -687,9 +687,9 @@ func StringLengthV(str interface{}, matched string, params ...string) bool {
 	return false
 }
 
-// Between check number's value is between the given range values 
+// Range check number's value is between the given range values 
 // can be represented as [ for <=, ( for <, ] for >=, ) for >
-func Between(v interface{}, matched string, params ...string) bool {
+func Range(v interface{}, matched string, params ...string) bool {
 	if len(params) == 4 {
 		q1 := params[0]
 		q2 := params[3]
@@ -698,6 +698,20 @@ func Between(v interface{}, matched string, params ...string) bool {
 				i := v.(int)
 				min, _ := strconv.Atoi(params[1])
 				max, _ := strconv.Atoi(params[2])
+				return ((q1 == "[" && i >= min) ||
+						(q1 == "(" && i > min) )&& 
+					   ((q2 == "]" && i <= max) ||
+						(q2 == ")" && i < max))
+			case float32, float64:
+				var i float64
+				switch v.(type) {
+					case float32:
+						i = float64(v.(float32))
+				    case float64:
+						i = v.(float64)
+				}
+				min, _ := strconv.ParseFloat(params[1], 64)
+				max, _ := strconv.ParseFloat(params[2], 64)
 				return ((q1 == "[" && i >= min) ||
 						(q1 == "(" && i > min) )&& 
 					   ((q2 == "]" && i <= max) ||
@@ -847,13 +861,7 @@ func validateField(v reflect.Value, t reflect.StructField, o reflect.Value, opti
 					if validatefunc, ok := ParamTagMap[key]; ok {
 						var field interface{}
 
-						switch v.Kind() {
-						case reflect.String, reflect.Int:
-							field = v.Interface() // make value into string, then validate with regex
-						default:
-							// type not yet supported, fail
-							return false, Error{t.Name, fmt.Errorf("Validator %s doesn't support kind %s", validator, v.Kind()), false}
-						}
+						field = v.Interface()
 						if result := validatefunc(field, validator, ps[1:]...); (!result && !negate) || (result && negate) {
 							var err error
 							if !negate {
@@ -964,7 +972,7 @@ func validateField(v reflect.Value, t reflect.StructField, o reflect.Value, opti
 			// check for non parametered validators
 			if validatefunc, ok := TagMap[validator]; ok {
 				switch v.Index(0).Kind() {
-				case reflect.String, reflect.Int:
+				case reflect.String, reflect.Int, reflect.Int32,reflect.Int64:
 					for i := 0; i < v.Len(); i++ {
 						field := fmt.Sprint(v.Index(i)) // make value into string, then validate with regex
 						if result := validatefunc(field); !result && !negate || result && negate {
