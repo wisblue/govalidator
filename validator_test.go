@@ -1,6 +1,7 @@
 package govalidator
 
 import (
+	"time"
 	"fmt"
 	"strings"
 	"testing"
@@ -2436,12 +2437,13 @@ func TestDatetime(t *testing.T) {
 		expected bool
 	}{
 		{"Mon Jan 2 15:04:05 -0700 MST 2006", true},
-		{"2006-1-2 15:04:05 -0700 MST", true},
+		{"2006-1-2 星期2 15:04:05 -0700 MST", true},
 		{"some wrong date format - 2016", false},
+		{"2016/8/4", true},
 	}
 
 	for _, v := range tests {
-		if ok, err := TypeCheckByString(v, "date", "datetime(Mon Jan 2 15:04:05 -0700 MST 2006|2006-1-2 15:04:05 -0700 MST)"); ok != true {
+		if ok, err := TypeCheckByString(v, "date", "datetime(Mon Jan 2 15:04:05 -0700 MST 2006|2006-1-2 15:04:05 -0700 MST)|2006/1/2"); ok != true {
 		t.Error(err)
 	}
 	}
