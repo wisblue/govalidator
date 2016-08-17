@@ -2402,7 +2402,7 @@ func TestCheckTypeByString(t *testing.T) {
 	}
 }
 
-func TestBetween(t *testing.T) {
+func TestRange(t *testing.T) {
 	v := 2
 	if ok, err := TypeCheckByString(v, "number", "int,range(1|3)"); ok != true {
 		t.Error(err)
@@ -2495,7 +2495,7 @@ func TestChinaIdCard(t *testing.T) {
 	}{
 		{"13800923008", false},
 		{"110104198206072636", true},
-		{"110104198206072635", false},
+		{"110104198206072635", false},  // validation code fail
 		{"110104820607263", true},
 	}
 
